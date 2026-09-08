@@ -1,0 +1,245 @@
+type Usuario {
+  id: ID!
+  nombre: String!
+  correo: String!
+  telefono: String
+  fotoPerfil: String
+  ciudad: String
+  estado: String!
+  rol: String!
+}
+
+type Raza {
+  id: ID!
+  nombre: String!
+  tamanoPromedio: String!
+  esperanzaVidaMin: Int!
+  esperanzaVidaMax: Int!
+  paisOrigen: String
+  temperamento: [String!]!
+  nivelEnergia: String!
+  descripcion: String
+  estado: String!
+}
+
+type Vacuna {
+  id: ID!
+  nombre: String!
+  fechaAplicacion: String!
+  proximaDosis: String
+  lote: String
+  estado: String!
+  veterinariaId: ID
+  observaciones: String
+}
+
+type Cartilla {
+  numeroCartilla: String
+  vacunas: [Vacuna!]!
+}
+
+type Perro {
+  id: ID!
+  usuarioId: ID!
+  razaId: ID!
+  nombre: String!
+  sexo: String!
+  fechaNacimiento: String!
+  peso: Float!
+  tamano: String!
+  color: String
+  descripcion: String
+  microchip: String
+  esterilizado: Boolean!
+  fotoPerfil: String
+  metaPasos: Int!
+  estado: String!
+  cartilla: Cartilla
+}
+
+type Veterinaria {
+  id: ID!
+  nombre: String!
+  direccion: String!
+  telefono: String!
+  correo: String
+  horario: String
+  servicios: [String!]!
+  estado: String!
+}
+
+type RegistroActividad {
+  id: ID!
+  perroId: ID!
+  fecha: String!
+  pasos: Int!
+  distancia: Float!
+  calorias: Float!
+  tiempoActividad: Int!
+  metaPasos: Int!
+  metaCumplida: Boolean!
+}
+
+type RegistroMedico {
+  id: ID!
+  perroId: ID!
+  tipoRegistro: String!
+  descripcion: String!
+  fechaRegistro: String!
+  veterinariaId: ID
+  diagnostico: String
+  tratamiento: String
+  observaciones: String
+}
+
+type CitaVeterinaria {
+  id: ID!
+  perroId: ID!
+  veterinariaId: ID!
+  fechaHora: String!
+  motivo: String!
+  estado: String!
+  notas: String
+}
+
+type Publicacion {
+  id: ID!
+  usuarioId: ID!
+  perroId: ID!
+  descripcion: String!
+  imagenes: [String!]!
+  ubicacionTexto: String
+  likes: [ID!]!
+  estado: String!
+}
+
+type Seguimiento {
+  id: ID!
+  seguidorId: ID!
+  seguidoId: ID!
+}
+
+input CrearUsuarioInput {
+  nombre: String!
+  correo: String!
+  telefono: String
+  password: String!
+  fotoPerfil: String
+  ciudad: String
+}
+
+input CrearRazaInput {
+  nombre: String!
+  tamanoPromedio: String!
+  esperanzaVidaMin: Int!
+  esperanzaVidaMax: Int!
+  paisOrigen: String
+  temperamento: [String!]
+  nivelEnergia: String
+  descripcion: String
+}
+
+input CrearPerroInput {
+  usuarioId: ID!
+  razaId: ID!
+  nombre: String!
+  sexo: String!
+  fechaNacimiento: String!
+  peso: Float!
+  tamano: String!
+  color: String
+  descripcion: String
+  microchip: String
+  esterilizado: Boolean
+  fotoPerfil: String
+  metaPasos: Int
+}
+
+input CrearVeterinariaInput {
+  nombre: String!
+  direccion: String!
+  telefono: String!
+  correo: String
+  horario: String
+  servicios: [String!]
+}
+
+input RegistrarActividadInput {
+  perroId: ID!
+  fecha: String!
+  pasos: Int!
+  distancia: Float
+  calorias: Float
+  tiempoActividad: Int
+  metaPasos: Int
+}
+
+input AgregarVacunaInput {
+  nombre: String!
+  fechaAplicacion: String!
+  proximaDosis: String
+  lote: String
+  estado: String
+  veterinariaId: ID
+  observaciones: String
+}
+
+input CrearCitaVeterinariaInput {
+  perroId: ID!
+  veterinariaId: ID!
+  fechaHora: String!
+  motivo: String!
+  notas: String
+}
+
+input CrearPublicacionInput {
+  usuarioId: ID!
+  perroId: ID!
+  descripcion: String!
+  imagenes: [String!]
+  ubicacionTexto: String
+}
+
+type Query {
+  obtenerUsuario(id: ID!): Usuario
+  listarUsuarios: [Usuario!]!
+
+  obtenerPerro(id: ID!): Perro
+  listarPerros: [Perro!]!
+  listarPerrosPorUsuario(usuarioId: ID!): [Perro!]!
+
+  obtenerRaza(id: ID!): Raza
+  listarRazas: [Raza!]!
+
+  obtenerVeterinaria(id: ID!): Veterinaria
+  listarVeterinarias: [Veterinaria!]!
+
+  listarActividadPorPerro(perroId: ID!): [RegistroActividad!]!
+
+  listarRegistrosMedicos(perroId: ID!): [RegistroMedico!]!
+
+  listarCitasPorPerro(perroId: ID!): [CitaVeterinaria!]!
+
+  listarPublicaciones: [Publicacion!]!
+  listarPublicacionesPorPerro(perroId: ID!): [Publicacion!]!
+}
+
+type Mutation {
+  crearUsuario(input: CrearUsuarioInput!): Usuario!
+
+  crearRaza(input: CrearRazaInput!): Raza!
+
+  crearPerro(input: CrearPerroInput!): Perro!
+
+  crearVeterinaria(input: CrearVeterinariaInput!): Veterinaria!
+
+  registrarActividad(input: RegistrarActividadInput!): RegistroActividad!
+
+  agregarVacuna(perroId: ID!, input: AgregarVacunaInput!): Perro!
+
+  crearCitaVeterinaria(
+    input: CrearCitaVeterinariaInput!
+  ): CitaVeterinaria!
+
+  crearPublicacion(input: CrearPublicacionInput!): Publicacion!
+}

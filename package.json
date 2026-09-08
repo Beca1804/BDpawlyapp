@@ -1,0 +1,21 @@
+{
+  "name": "bdpawlyapp",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+  "dev": "node src/index.js",
+  "aggregation": "node scripts/aggregation.js",
+  "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "dotenv": "^17.4.2",
+    "graphql": "^16.14.2",
+    "mongoose": "^9.9.5"
+  }
+}
