@@ -64,7 +64,7 @@ const VeterinariaSchema = new mongoose.Schema(
           values: ['Point'],
           message: 'El tipo de ubicación debe ser Point'
         },
-        default: 'Point'
+        default: undefined
       },
 
       coordinates: {

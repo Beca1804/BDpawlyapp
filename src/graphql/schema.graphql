@@ -216,7 +216,7 @@ type Query {
 
   listarActividadPorPerro(perroId: ID!): [RegistroActividad!]!
 
-  listarRegistrosMedicos(perroId: ID!): [RegistroMedico!]!
+  listarRegistrosMedicos(perroId: ID!, limit: Int = 50, offset: Int = 0): [RegistroMedico!]!
 
   listarCitasPorPerro(perroId: ID!): [CitaVeterinaria!]!
 
@@ -242,4 +242,38 @@ type Mutation {
   ): CitaVeterinaria!
 
   crearPublicacion(input: CrearPublicacionInput!): Publicacion!
+}
+
+
+type AuthPayload { token: String!, usuario: Usuario! }
+type ResumenExpediente { tipoRegistro: String!, cantidad: Int! }
+input CrearRegistroMedicoInput {
+ perroId: ID!
+ tipoRegistro: String!
+ descripcion: String!
+ fechaRegistro: String
+ veterinariaId: ID
+ diagnostico: String
+ tratamiento: String
+ observaciones: String
+}
+input ActualizarRegistroMedicoInput {
+ tipoRegistro: String
+ descripcion: String
+ fechaRegistro: String
+ veterinariaId: ID
+ diagnostico: String
+ tratamiento: String
+ observaciones: String
+}
+extend type Query {
+ me: Usuario!
+ resumenExpedientes(perroId: ID): [ResumenExpediente!]!
+}
+extend type Mutation {
+ login(correo: String!, password: String!): AuthPayload!
+ logout: Boolean!
+ crearRegistroMedico(input: CrearRegistroMedicoInput!): RegistroMedico!
+ actualizarRegistroMedico(id: ID!, input: ActualizarRegistroMedicoInput!): RegistroMedico!
+ eliminarRegistroMedico(id: ID!): Boolean!
 }

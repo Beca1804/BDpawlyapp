@@ -82,7 +82,7 @@ const RazaSchema = new mongoose.Schema(
   }
 );
 
-RazaSchema.index({ tamañoPromedio: 1 });
+RazaSchema.index({ tamanoPromedio: 1 });
 
 RazaSchema.index({ nivelEnergia: 1 });
 

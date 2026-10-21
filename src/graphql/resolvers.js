@@ -1,3 +1,6 @@
+import {login,logout,autorizado,esAdmin,mascotaPropia,limitarLogin} from '../security/auth.js';
+import {fail,safeError} from '../security/errors.js';
+import {medicalQuery,medicalMutation} from '../services/medical.js';
 import {
   UsuarioModel,
   PerroModel,
@@ -16,7 +19,7 @@ export const resolvers = {
     },
 
     listarUsuarios: async () => {
-      return await UsuarioModel.find();
+      return await UsuarioModel.find().limit(100);
     },
 
     obtenerPerro: async (_, { id }) => {
@@ -24,7 +27,7 @@ export const resolvers = {
     },
 
     listarPerros: async () => {
-      return await PerroModel.find();
+      return await PerroModel.find().limit(100);
     },
 
     listarPerrosPorUsuario: async (_, { usuarioId }) => {
@@ -36,7 +39,7 @@ export const resolvers = {
     },
 
     listarRazas: async () => {
-      return await RazaModel.find();
+      return await RazaModel.find().limit(100);
     },
 
     obtenerVeterinaria: async (_, { id }) => {
@@ -44,7 +47,7 @@ export const resolvers = {
     },
 
     listarVeterinarias: async () => {
-      return await VeterinariaModel.find({ estado: 'ACTIVA' });
+      return await VeterinariaModel.find({ estado: 'ACTIVA' }).limit(100);
     },
 
     listarActividadPorPerro: async (_, { perroId }) => {
@@ -208,3 +211,42 @@ export const resolvers = {
     }
   }
 };
+
+// Mantener los contratos originales, añadiendo autenticación y alcance por propietario.
+Object.assign(resolvers.Query,medicalQuery,{
+ me:async (_,args,ctx)=>UsuarioModel.findById(autorizado(ctx).id),
+ obtenerUsuario:async (_,{id},ctx)=>{const u=autorizado(ctx);if(u.rol!=='ADMIN'&&id!==u.id)fail('Usuario no disponible.','FORBIDDEN');return UsuarioModel.findById(id);},
+ listarUsuarios:async (_,args,ctx)=>{const u=autorizado(ctx);return UsuarioModel.find(u.rol==='ADMIN'?{}:{_id:u.id}).limit(100);},
+ obtenerPerro:async (_,{id},ctx)=>mascotaPropia(id,ctx),
+ listarPerros:async (_,args,ctx)=>{const u=autorizado(ctx);return PerroModel.find(u.rol==='ADMIN'?{}:{usuarioId:u.id}).limit(100);},
+ listarPerrosPorUsuario:async (_,{usuarioId},ctx)=>{const u=autorizado(ctx);if(u.rol!=='ADMIN'&&usuarioId!==u.id)fail('Usuario no disponible.','FORBIDDEN');return PerroModel.find({usuarioId}).limit(100);}
+});
+Object.assign(resolvers.Mutation,{login,logout,...medicalMutation});
+function ids(value,key='') {
+ if(value==null)return;
+ if((key==='id'||key.endsWith('Id'))&&(typeof value!=='string'||!/^[a-f0-9]{24}$/i.test(value)))fail('Identificador inválido.');
+ if(typeof value==='object')for(const [k,v] of Object.entries(value))ids(v,k);
+}
+for(const [kind,operations] of Object.entries(resolvers)) {
+ for(const [name,fn] of Object.entries(operations)) {
+  operations[name]=async (parent,args,ctx,info)=>{
+   try {
+    ids(args);
+    const publicRead=['obtenerRaza','listarRazas','obtenerVeterinaria','listarVeterinarias'].includes(name);
+    if(!publicRead&&!['crearUsuario','login'].includes(name))autorizado(ctx);
+    if(name==='crearUsuario'){await limitarLogin(ctx.ip);}
+    if(['crearRaza','crearVeterinaria'].includes(name)&&!esAdmin(ctx))fail('Solo un administrador puede editar catálogos.','FORBIDDEN');
+    if(args.input?.usuarioId&&ctx.user?.rol!=='ADMIN'&&args.input.usuarioId!==ctx.user?.id)fail('No puedes asignar datos a otro usuario.','FORBIDDEN');
+    // Las publicaciones son sociales; la actividad, cartilla, citas y expedientes son privados.
+    if(['listarActividadPorPerro','listarCitasPorPerro','agregarVacuna','registrarActividad','crearCitaVeterinaria','crearPublicacion'].includes(name))await mascotaPropia(args.perroId||args.input?.perroId,ctx);
+    const result=await fn(parent,args,ctx,info);
+    return Array.isArray(result)&&!['listarRegistrosMedicos','resumenExpedientes'].includes(name)?result.slice(0,100):result;
+   }catch(error){return safeError(error);}
+  };
+ }
+}
+// ID explícito para documentos y copias JSON de Redis; fechas ISO uniformes.
+for(const type of ['Usuario','Raza','Perro','Veterinaria','RegistroActividad','RegistroMedico','CitaVeterinaria','Publicacion','Seguimiento','Vacuna'])resolvers[type]={id:row=>String(row._id||row.id)};
+for(const [type,fields] of Object.entries({Perro:['fechaNacimiento'],Vacuna:['fechaAplicacion','proximaDosis'],RegistroActividad:['fecha'],RegistroMedico:['fechaRegistro'],CitaVeterinaria:['fechaHora']})) {
+ for(const field of fields)resolvers[type][field]=row=>row[field]==null?null:new Date(row[field]).toISOString();
+}
