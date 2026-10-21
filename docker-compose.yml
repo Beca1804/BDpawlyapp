@@ -1,4 +1,9 @@
+
 services:
+
+  # =====================================
+  # MONGODB - PRIMER PARCIAL
+  # =====================================
   mongodb:
     image: mongo:7
     container_name: pawly-mongodb
@@ -7,7 +12,86 @@ services:
       - "27017:27017"
     volumes:
       - pawly_mongo_data:/data/db
+    networks:
+      - pawly-network
 
+  # =====================================
+  # REDIS STACK - SEGUNDO PARCIAL
+  # =====================================
+  redis-stack:
+    image: redis/redis-stack:latest
+    container_name: bda-redis-stack
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:?Configura REDIS_PASSWORD en .env}"
+    volumes:
+      - pawly_redis_data:/data
+    networks:
+      - pawly-network
+
+  # =====================================
+  # NEO4J - SEGUNDO PARCIAL
+  # AUTENTICACIÓN ACTIVADA
+  # =====================================
+  neo4j:
+    image: neo4j:5
+    container_name: bda-neo4j
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Configura NEO4J_PASSWORD en .env}
+      NEO4J_dbms_security_auth__enabled: "true"
+    volumes:
+      - pawly_neo4j_data:/data
+    networks:
+      - pawly-network
+
+  # =====================================
+  # API GRAPHQL - APOLLO SERVER
+  # =====================================
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+
+      # MongoDB
+      MONGO_URI: mongodb://mongodb:27017/pawlydb
+
+      # Redis
+      REDIS_HOST: redis-stack
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      HISTORY_CACHE_TTL: 60
+
+      # Autenticación JWT
+      SESSION_TTL: 3600
+      JWT_SECRET: ${JWT_SECRET}
+
+    depends_on:
+      - mongodb
+      - redis-stack
+    networks:
+      - pawly-network
+
+# =====================================
+# ALMACENAMIENTO PERSISTENTE
+# =====================================
 volumes:
   pawly_mongo_data:
-  
+  pawly_redis_data:
+  pawly_neo4j_data:
+
+# =====================================
+# RED PRIVADA DE DOCKER
+# =====================================
+networks:
+  pawly-network:
+    driver: bridge

@@ -9,6 +9,12 @@ type Usuario {
   rol: String!
 }
 
+
+type AuthPayload {
+  token: String!
+  usuario: Usuario!
+}
+
 type Raza {
   id: ID!
   nombre: String!
@@ -203,6 +209,8 @@ input CrearPublicacionInput {
 type Query {
   obtenerUsuario(id: ID!): Usuario
   listarUsuarios: [Usuario!]!
+  
+  me: Usuario!
 
   obtenerPerro(id: ID!): Perro
   listarPerros: [Perro!]!
@@ -226,7 +234,9 @@ type Query {
 
 type Mutation {
   crearUsuario(input: CrearUsuarioInput!): Usuario!
-
+  login(correo: String!, password: String!): AuthPayload!
+  logout: Boolean!
+  
   crearRaza(input: CrearRazaInput!): Raza!
 
   crearPerro(input: CrearPerroInput!): Perro!
