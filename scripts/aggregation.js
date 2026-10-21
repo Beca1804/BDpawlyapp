@@ -1,13 +1,12 @@
 import 'dotenv/config';
 
 import mongoose from 'mongoose';
-import {conectarMongo} from '../src/infrastructure/database/mongo.js';
 
 import { RegistroActividadModel } from '../src/infrastructure/mongoose/RegistroActividadModel.js';
 
 async function ejecutarPipeline() {
   try {
-    await conectarMongo();
+    await mongoose.connect(process.env.MONGO_URI);
 
     console.log('Conexión exitosa a MongoDB');
 
@@ -70,8 +69,7 @@ async function ejecutarPipeline() {
 
     console.table(resultado);
   } catch (error) {
-    console.error('No se pudo ejecutar el reporte.');
-    process.exitCode=1;
+    console.error('Error al ejecutar el pipeline:', error.message);
   } finally {
     await mongoose.disconnect();
   }

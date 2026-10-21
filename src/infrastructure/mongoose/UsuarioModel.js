@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 const UsuarioSchema = new mongoose.Schema(
   {
@@ -31,12 +30,11 @@ const UsuarioSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      select: false,
       required: [true, 'La contraseña es obligatoria'],
       minlength: [8, 'La contraseña debe tener al menos 8 caracteres'],
       validate: {
         validator: function (valor) {
-          return Buffer.byteLength(valor) <= 72 && /[!@#$%^&*(),.?":{}|<>_\-+=]/.test(valor);
+          return /[!@#$%^&*(),.?":{}|<>_\-+=]/.test(valor);
         },
         message: 'La contraseña debe contener al menos un carácter especial'
       }
@@ -78,9 +76,5 @@ const UsuarioSchema = new mongoose.Schema(
     versionKey: false
   }
 );
-
-UsuarioSchema.pre('save', async function () {
-  if(this.isModified('password')) this.password=await bcrypt.hash(this.password,12);
-});
 
 export const UsuarioModel = mongoose.model('Usuario', UsuarioSchema);
