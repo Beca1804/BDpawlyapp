@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {RazaModel,PerroModel,UsuarioModel,RegistroMedicoModel,VeterinariaModel} from '../src/infrastructure/mongoose/index.js';
+import {ttl} from '../src/infrastructure/database/redis.js';
+test('rechaza rangos de esperanza de vida invertidos',async()=>{await assert.rejects(new RazaModel({nombre:'Prueba',tamanoPromedio:'MEDIANO',esperanzaVidaMin:15,esperanzaVidaMax:10}).validate());});
+test('rechaza contraseñas débiles o mayores de 72 bytes',async()=>{for(const password of ['corta!','sinSignos12','a'.repeat(72)+'!'])await assert.rejects(new UsuarioModel({nombre:'Prueba',correo:'p@example.invalid',password}).validate());});
+test('rechaza registros médicos futuros y tipos inexistentes',async()=>{await assert.rejects(new RegistroMedicoModel({perroId:'0123456789abcdef01234567',tipoRegistro:'CONSULTA',descripcion:'Prueba',fechaRegistro:'2999-01-01'}).validate());await assert.rejects(new RegistroMedicoModel({perroId:'0123456789abcdef01234567',tipoRegistro:'NO_EXISTE',descripcion:'Prueba'}).validate());});
+test('veterinaria sin coordenadas no crea un GeoJSON incompleto',async()=>{const v=new VeterinariaModel({nombre:'Demo',direccion:'Demo',telefono:'123'});await v.validate();assert.equal(v.ubicacion?.type,undefined);});
+test('el índice de tamaño usa el campo real',()=>{assert.ok(RazaModel.schema.indexes().some(([index])=>index.tamanoPromedio===1));});
+test('TTL debe ser un entero positivo y acotado',()=>{process.env.TEST_TTL='0';assert.throws(()=>ttl('TEST_TTL',60));process.env.TEST_TTL='60';assert.equal(ttl('TEST_TTL',1),60);delete process.env.TEST_TTL;});
