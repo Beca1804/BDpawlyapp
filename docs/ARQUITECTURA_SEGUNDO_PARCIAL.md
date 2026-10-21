@@ -1,7 +1,6 @@
 # Pawly: arquitectura Docker y bases de datos NoSQL
 
 **Proyecto semestral — Bases de Datos Avanzadas**  
-**Repositorio Beca1804/BDpawlyapp**
 
 ## 1. Descripción del proyecto
 
