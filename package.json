@@ -5,17 +5,20 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-  "dev": "node src/index.js",
-  "aggregation": "node scripts/aggregation.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node src/index.js",
+    "aggregation": "node scripts/aggregation.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@apollo/server": "^5.5.1",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "graphql": "^16.14.2",
-    "mongoose": "^9.9.5"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.5",
+    "redis": "^6.3.0"
   }
 }
