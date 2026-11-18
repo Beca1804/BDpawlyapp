@@ -16,6 +16,10 @@ import { crearContexto } from './auth/context.js';
 
 // Resolvers de GraphQL
 import { resolvers } from './graphql/resolvers.js';
+//conexion a neo desde graph
+import { conectarNeo4j } from './infrastructure/database/neo4j.js';
+
+import { conectarRabbitMQ } from './infrastructure/messaging/rabbitmq.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +38,12 @@ async function iniciarApp() {
 
   // 2. Conectar Redis
   await conectarRedis();
+
+  // 3. Conectar a neo
+  await conectarNeo4j();
+
+// RabbitMQ es opcional: no debe impedir iniciar Apollo Server
+await conectarRabbitMQ();
 
   // 3. Crear Apollo Server
   const server = new ApolloServer({

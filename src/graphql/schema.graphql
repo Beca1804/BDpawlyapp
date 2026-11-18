@@ -9,10 +9,20 @@ type Usuario {
   rol: String!
 }
 
-
 type AuthPayload {
   token: String!
   usuario: Usuario!
+}
+
+# ========================================
+# MENÚ DINÁMICO RBAC - NEO4J
+# ========================================
+
+type MenuItem {
+  id: ID!
+  title: String!
+  order: Int
+  icon: String
 }
 
 type Raza {
@@ -125,6 +135,10 @@ type Seguimiento {
   seguidoId: ID!
 }
 
+# ========================================
+# INPUTS
+# ========================================
+
 input CrearUsuarioInput {
   nombre: String!
   correo: String!
@@ -206,11 +220,18 @@ input CrearPublicacionInput {
   ubicacionTexto: String
 }
 
+# ========================================
+# QUERIES
+# ========================================
+
 type Query {
   obtenerUsuario(id: ID!): Usuario
   listarUsuarios: [Usuario!]!
-  
+
   me: Usuario!
+
+  # Menú dinámico según permisos RBAC
+  miMenu: [MenuItem!]!
 
   obtenerPerro(id: ID!): Perro
   listarPerros: [Perro!]!
@@ -232,11 +253,20 @@ type Query {
   listarPublicacionesPorPerro(perroId: ID!): [Publicacion!]!
 }
 
+# ========================================
+# MUTATIONS
+# ========================================
+
 type Mutation {
   crearUsuario(input: CrearUsuarioInput!): Usuario!
-  login(correo: String!, password: String!): AuthPayload!
+
+  login(
+    correo: String!
+    password: String!
+  ): AuthPayload!
+
   logout: Boolean!
-  
+
   crearRaza(input: CrearRazaInput!): Raza!
 
   crearPerro(input: CrearPerroInput!): Perro!
