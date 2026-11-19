@@ -4,3 +4,9 @@
 node_modules/
 .DS_Store
 *.log
+
+.demo-credentials.txt
+.local/
+
+# Guía personal de presentación
+docs/DEFENSA.md

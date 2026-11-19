@@ -14,13 +14,13 @@ export async function validarAccesoRuta(userId, path, method, operation) {
       MATCH (u:User {id: $userId})-[:HAS_ROLE]->(rol:Role)
       MATCH (rol)-[:INHERITS*0..]->(rolEfectivo:Role)
       MATCH (rolEfectivo)-[:CAN_ACCESS]->(ruta:Route {
-        path: $path,
-        method: $method,
-        operation: $operation
+        path: $path
       })
+      WHERE ($method IS NULL OR ruta.method = $method)
+        AND ($operation IS NULL OR ruta.operation = $operation)
       RETURN COUNT(ruta) > 0 AS autorizado
       `,
-      { userId, path, method, operation }
+      { userId, path, method: method ?? null, operation: operation ?? null }
     );
 
     return resultado.records[0]?.get('autorizado') === true;
@@ -52,7 +52,9 @@ export async function obtenerMenuUsuario(userId) {
 
       OPTIONAL MATCH (menu)-[:NAVIGATES_TO]->(ruta:Route)
 
+      OPTIONAL MATCH (padre:MenuNode)-[:HAS_CHILD]->(menu)
       RETURN DISTINCT
+        padre.id AS parentId,
         menu.id AS id,
         menu.title AS title,
         menu.order AS orden,
@@ -70,7 +72,8 @@ export async function obtenerMenuUsuario(userId) {
       order: registro.get('orden')?.toNumber?.() ??
              registro.get('orden'),
       icon: registro.get('icon'),
-      path: registro.get('path')
+      path: registro.get('path'),
+      parentId: registro.get('parentId')
     }));
 
   } finally {

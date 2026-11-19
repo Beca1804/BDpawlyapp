@@ -1,5 +1,17 @@
 import mongoose from 'mongoose';
 
+const UbicacionSchema = new mongoose.Schema({
+  type: { type: String, enum: ['Point'], default: 'Point' },
+  coordinates: {
+    type: [Number], required: true,
+    validate: {
+      validator: c => Array.isArray(c) && c.length === 2 &&
+        c[0] >= -180 && c[0] <= 180 && c[1] >= -90 && c[1] <= 90,
+      message: 'Las coordenadas deben contener [longitud, latitud] válidas'
+    }
+  }
+}, { _id: false });
+
 const VeterinariaSchema = new mongoose.Schema(
   {
     nombre: {
@@ -57,43 +69,7 @@ const VeterinariaSchema = new mongoose.Schema(
       }
     },
 
-    ubicacion: {
-      type: {
-        type: String,
-        enum: {
-          values: ['Point'],
-          message: 'El tipo de ubicación debe ser Point'
-        },
-        default: 'Point'
-      },
-
-      coordinates: {
-        type: [Number],
-        validate: {
-          validator: function (coordinates) {
-            if (!coordinates || coordinates.length === 0) {
-              return true;
-            }
-
-            if (coordinates.length !== 2) {
-              return false;
-            }
-
-            const [longitud, latitud] = coordinates;
-
-            return (
-              longitud >= -180 &&
-              longitud <= 180 &&
-              latitud >= -90 &&
-              latitud <= 90
-            );
-          },
-          message:
-            'Las coordenadas deben contener [longitud, latitud] válidas'
-        },
-        default: undefined
-      }
-    },
+    ubicacion: { type: UbicacionSchema, default: undefined },
 
     estado: {
       type: String,

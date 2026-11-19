@@ -1,160 +1,141 @@
+x-app: &app
+  build: .
+  networks: [pawly-network]
+  environment: &app-env
+    PORT: 4000
+    MONGO_URI: mongodb://mongodb:27017/pawlydb
+    REDIS_HOST: redis-stack
+    REDIS_PORT: 6379
+    REDIS_PASSWORD: ${REDIS_PASSWORD:?Configura REDIS_PASSWORD}
+    JWT_SECRET: ${JWT_SECRET:?Configura JWT_SECRET}
+    SESSION_TTL: 3600
+    HISTORY_CACHE_TTL: 60
+    NEO4J_URI: bolt://neo4j:7687
+    NEO4J_USER: neo4j
+    NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Configura NEO4J_PASSWORD}
+    RABBITMQ_URL: amqp://${RABBITMQ_USER:?Configura RABBITMQ_USER}:${RABBITMQ_PASSWORD:?Configura RABBITMQ_PASSWORD}@rabbitmq:5672
+    SCYLLA_HOST: scylladb
 
 services:
-
-  # =====================================
-  # MONGODB - PRIMER PARCIAL
-  # =====================================
   mongodb:
     image: mongo:7
-    container_name: pawly-mongodb
     restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - pawly_mongo_data:/data/db
-    networks:
-      - pawly-network
-
-  # =====================================
-  # REDIS STACK - SEGUNDO PARCIAL
-  # =====================================
+    ports: ['127.0.0.1:27017:27017']
+    volumes: [pawly_mongo_data:/data/db]
+    networks: [pawly-network]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)']
+      interval: 5s
+      timeout: 5s
+      retries: 30
   redis-stack:
     image: redis/redis-stack:latest
-    container_name: bda-redis-stack
     restart: unless-stopped
-    ports:
-      - "6379:6379"
-      - "8001:8001"
+    ports: ['127.0.0.1:6379:6379', '127.0.0.1:8001:8001']
     environment:
-      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD:?Configura REDIS_PASSWORD en .env}"
-    volumes:
-      - pawly_redis_data:/data
-    networks:
-      - pawly-network
-  # =====================================
-  # SCYLLADB - TERCER PARCIAL
-  # =====================================
-  scylladb:
-    image: scylladb/scylla:6.2
-    container_name: bda-scylladb
-    restart: unless-stopped
-    command:
-      - --smp=1
-      - --memory=1G
-      - --overprovisioned=1
-    ports:
-      - "127.0.0.1:9042:9042"
-    volumes:
-      - pawly_scylla_data:/var/lib/scylla
-    networks:
-      - pawly-network
-
-  # =====================================
-  # NEO4J - SEGUNDO PARCIAL
-  # AUTENTICACIÓN ACTIVADA
-  # =====================================
+      REDIS_ARGS: --requirepass ${REDIS_PASSWORD}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes: [pawly_redis_data:/data]
+    networks: [pawly-network]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 30
   neo4j:
     image: neo4j:5
-    container_name: bda-neo4j
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:7474:7474"
-      - "127.0.0.1:7687:7687"
+    ports: ['127.0.0.1:7474:7474', '127.0.0.1:7687:7687']
     environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Configura NEO4J_PASSWORD en .env}
-      NEO4J_dbms_security_auth__enabled: "true"
-    volumes:
-      - pawly_neo4j_data:/data
-    networks:
-      - pawly-network
-
-  # =====================================
-  # RABBITMQ - TERCER PARCIAL
-  # =====================================
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+    volumes: [pawly_neo4j_data:/data]
+    networks: [pawly-network]
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null http://localhost:7474 || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+  scylladb:
+    image: scylladb/scylla:6.2
+    restart: unless-stopped
+    command: ['--smp=1', '--memory=1G', '--overprovisioned=1', '--commitlog-sync=batch', '--commitlog-sync-batch-window-in-ms=2']
+    ports: ['127.0.0.1:9042:9042']
+    volumes: [pawly_scylla_data:/var/lib/scylla]
+    networks: [pawly-network]
+    healthcheck:
+      test: [CMD-SHELL, 'cqlsh -e "DESCRIBE KEYSPACES" >/dev/null 2>&1']
+      interval: 10s
+      timeout: 10s
+      retries: 40
+      start_period: 30s
   rabbitmq:
     image: rabbitmq:4-management
-    container_name: bda-rabbitmq
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+    ports: ['127.0.0.1:5672:5672', '127.0.0.1:15672:15672']
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Configura RABBITMQ_USER en .env}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Configura RABBITMQ_PASSWORD en .env}
-    volumes:
-      - pawly_rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - pawly-network
-
-  # =====================================
-  # API GRAPHQL - APOLLO SERVER
-  # =====================================
-  api:
-    build: .
-    restart: unless-stopped
-    ports:
-      - "4000:4000"
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes: [pawly_rabbitmq_data:/var/lib/rabbitmq]
+    networks: [pawly-network]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+  init-rbac:
+    <<: *app
+    command: node scripts/init-rbac.js
     environment:
-      PORT: 4000
-
-      # MongoDB
-      MONGO_URI: mongodb://mongodb:27017/pawlydb
-
-      # Redis
-      REDIS_HOST: redis-stack
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      HISTORY_CACHE_TTL: 60
-
-      # Autenticación JWT
-      SESSION_TTL: 3600
-      JWT_SECRET: ${JWT_SECRET}
-
-      NEO4J_URI: bolt://neo4j:7687
-      NEO4J_USER: neo4j
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
-
-      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
-
+      <<: *app-env
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
     depends_on:
-      - mongodb
-      - redis-stack
-    networks:
-      - pawly-network
-
-  # =====================================
-  # WORKER DE AUDITORÍA - TERCER PARCIAL
-  # =====================================
+      mongodb: {condition: service_healthy}
+      neo4j: {condition: service_healthy}
+    restart: on-failure
+  init-scylla:
+    image: scylladb/scylla:6.2
+    entrypoint: ['cqlsh', 'scylladb', '-f', '/init/init-scylla.cql']
+    volumes: ['./scripts/init:/init:ro']
+    networks: [pawly-network]
+    depends_on:
+      scylladb: {condition: service_healthy}
+    restart: on-failure
+  api:
+    <<: *app
+    restart: unless-stopped
+    ports: ['127.0.0.1:4000:4000']
+    depends_on:
+      mongodb: {condition: service_healthy}
+      redis-stack: {condition: service_healthy}
+      init-rbac: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, node, --input-type=module, -e, 'const r=await fetch("http://localhost:4000/",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"{__typename}"})});process.exit(r.ok?0:1)']
+      interval: 5s
+      timeout: 5s
+      retries: 20
   worker-auditoria:
-    build: .
-    container_name: bda-worker-auditoria
+    <<: *app
     restart: unless-stopped
     command: node src/workers/worker-auditoria.js
-
-    environment:
-      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      SCYLLA_HOST: scylladb
-
     depends_on:
-      - rabbitmq
-      - scylladb
-
-    networks:
-      - pawly-network
-      
-# =====================================
-# ALMACENAMIENTO PERSISTENTE
-# =====================================
+      rabbitmq: {condition: service_healthy}
+      init-scylla: {condition: service_completed_successfully}
+  demo:
+    <<: *app
+    command: node scripts/demo-server.js
+    restart: unless-stopped
+    ports: ['127.0.0.1:8080:8080']
+    environment:
+      API_URL: http://api:4000
+    depends_on:
+      api: {condition: service_healthy}
 volumes:
   pawly_mongo_data:
   pawly_redis_data:
   pawly_neo4j_data:
   pawly_rabbitmq_data:
   pawly_scylla_data:
-
-# =====================================
-# RED PRIVADA DE DOCKER
-# =====================================
 networks:
   pawly-network:
     driver: bridge

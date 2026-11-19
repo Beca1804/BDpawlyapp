@@ -1,6 +1,6 @@
 
 import amqp from 'amqplib';
-import cassandra from 'cassandra-driver';
+import { crearEventoAuditoria } from './evento-auditoria.js';
 
 const COLA_AUDITORIA = 'auditoria.eventos';
 const REINTENTO_MS = 5000;
@@ -63,7 +63,7 @@ export async function conectarRabbitMQ() {
       nuevaConexion.on('error', (error) => {
         console.warn(
           '[RABBITMQ] Error de conexión:',
-          error.message
+          error.code || 'ERROR_AMQP'
         );
       });
 
@@ -81,7 +81,7 @@ export async function conectarRabbitMQ() {
       nuevoCanal.on('error', (error) => {
         console.warn(
           '[RABBITMQ] Error del canal:',
-          error.message
+          error.code || 'ERROR_AMQP'
         );
       });
 
@@ -98,7 +98,7 @@ export async function conectarRabbitMQ() {
     } catch (error) {
       console.warn(
         '[RABBITMQ] No disponible:',
-        error.message
+        error.code || 'ERROR_AMQP'
       );
 
       if (nuevaConexion) {
@@ -126,47 +126,43 @@ export async function conectarRabbitMQ() {
 // ========================================
 
 export async function publicarEventoAuditoria(evento) {
+  let canalUsado = null;
   try {
     if (!canal) {
       programarReconexion();
       return false;
     }
-
-    const mensaje = {
-      evento_id: cassandra.types.TimeUuid.now().toString(),
-      tipo_evento: evento.tipo_evento,
-      usuario_id: evento.usuario_id ?? null,
-      jti: evento.jti ?? null,
-      resultado: evento.resultado,
-      fecha: new Date().toISOString()
-    };
-
-    const canalActual = canal;
-
+    const mensaje = crearEventoAuditoria(evento);
+    canalUsado = canal;
     await new Promise((resolve, reject) => {
-      canalActual.sendToQueue(
-        COLA_AUDITORIA,
-        Buffer.from(JSON.stringify(mensaje)),
-        {
-          persistent: true,
-          contentType: 'application/json',
-          messageId: mensaje.evento_id
-        },
-        (error) => {
-          if (error) reject(error);
-          else resolve();
-        }
-      );
+      const timer = setTimeout(() => reject(new Error('Tiempo de publicación agotado')), 1500);
+      timer.unref();
+      const confirmar = (error) => {
+        clearTimeout(timer);
+        if (error) reject(error);
+        else resolve();
+      };
+      try {
+        canalUsado.sendToQueue(
+          COLA_AUDITORIA,
+          Buffer.from(JSON.stringify(mensaje)),
+          { persistent: true, contentType: 'application/json', messageId: mensaje.evento_id },
+          confirmar
+        );
+      } catch (error) {
+        confirmar(error);
+      }
     });
-
     return true;
-
   } catch (error) {
-    console.warn(
-      '[RABBITMQ] No se pudo publicar el evento:',
-      error.message
-    );
-
+    console.warn('[RABBITMQ] Publicación no confirmada:', error.code || 'ERROR_AMQP');
+    // Una confirmación tardía de un canal anterior no debe cerrar la conexión nueva.
+    if (canalUsado && canal === canalUsado) {
+      const conexionFallida = conexion;
+      conexion = null;
+      canal = null;
+      if (conexionFallida) void conexionFallida.close().catch(() => {});
+    }
     programarReconexion();
     return false;
   }

@@ -24,6 +24,7 @@ type MenuItem {
   order: Int
   icon: String
   path: String
+  parentId: ID
 }
 
 type Raza {
