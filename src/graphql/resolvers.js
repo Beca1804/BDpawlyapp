@@ -601,6 +601,11 @@ export const resolvers = {
       return await perro.save();
     },
 
+    crearVeterinaria: async (_, { input }, { usuario }) => {
+      await autorizarRuta(usuario, '/admin/veterinarias/crear', 'MUTATION', 'crearVeterinaria');
+      return VeterinariaModel.create(input);
+    },
+
     registrarActividad: async (_, { input }, { usuario }) => {
 
       // 1. Verificar permiso RBAC en Neo4j

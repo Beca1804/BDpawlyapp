@@ -48,7 +48,8 @@ await conectarRabbitMQ();
   // 3. Crear Apollo Server
   const server = new ApolloServer({
     typeDefs,
-    resolvers
+    resolvers,
+    includeStacktraceInErrorResponses: false
   });
 
   // 4. Iniciar GraphQL con contexto de autenticación
