@@ -31,7 +31,7 @@ export async function validarAccesoRuta(userId, path, method, operation) {
 }
 
 // ========================================
-// OBTENER MENÚ DINÁMICO DEL USUARIO
+// OBTENER MENÚ DINÁMICO CON RUTAS
 // ========================================
 
 export async function obtenerMenuUsuario(userId) {
@@ -43,16 +43,22 @@ export async function obtenerMenuUsuario(userId) {
       MATCH (u:User {id: $userId})-[:HAS_ROLE]->(rol:Role)
       MATCH (rol)-[:INHERITS*0..]->(rolEfectivo:Role)
       MATCH (rolEfectivo)-[:CAN_VIEW_MENU]->(menu:MenuNode)
+
       WHERE NOT menu.id IN [
         'MENU_BIENVENIDA',
         'MENU_LOGIN',
         'MENU_REGISTRO'
       ]
+
+      OPTIONAL MATCH (menu)-[:NAVIGATES_TO]->(ruta:Route)
+
       RETURN DISTINCT
         menu.id AS id,
         menu.title AS title,
         menu.order AS orden,
-        menu.icon AS icon
+        menu.icon AS icon,
+        ruta.path AS path
+
       ORDER BY orden, title
       `,
       { userId }
@@ -63,7 +69,8 @@ export async function obtenerMenuUsuario(userId) {
       title: registro.get('title'),
       order: registro.get('orden')?.toNumber?.() ??
              registro.get('orden'),
-      icon: registro.get('icon')
+      icon: registro.get('icon'),
+      path: registro.get('path')
     }));
 
   } finally {

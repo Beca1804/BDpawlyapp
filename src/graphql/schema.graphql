@@ -23,6 +23,7 @@ type MenuItem {
   title: String!
   order: Int
   icon: String
+  path: String
 }
 
 type Raza {
